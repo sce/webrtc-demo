@@ -58,3 +58,14 @@ before they actually connect.
     LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
     OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
+
+## Other Copyright
+
+The files `public/javascript/adapter.js` and `public/javascript/common.js` have
+the following copyright:
+
+    Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+
+    Use of this source code is governed by a BSD-style license
+    that can be found in the LICENSE file in the root of the source
+    tree.
