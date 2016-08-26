@@ -1,9 +1,23 @@
 /* actAsClient.js */
 
 var Peer = require('./peer.js');
+var mmPeer = require('./mmpeer.js');
 
 var gotReceiveChannel = function(receiveChannel) {
   window.receiveChannel = receiveChannel;
+
+  // This means the connection is up and running and we're ready to go full multimedia:
+  mmPeer.afterConnect(peer, {
+    remoteStream: {
+      add: function(stream) {
+        document.querySelector('video.remote').src = window.URL.createObjectURL(stream);
+        //document.querySelector('video.remote').srcObj = stream;
+      },
+      remove: function(stream) {
+        console.log("remove???");
+      },
+    }
+  });
 
   if (this.onreceivemessage) {
     receiveChannel.onmessage = this.onreceivemessage;
@@ -41,6 +55,15 @@ var gotSendChannel = function(sendChannel) {
 var peer = new Peer("//localhost:4000/client", "//localhost:4000/server", gotReceiveChannel, gotSendChannel);
 
 var actAsClient = true;
-peer.createConnection(actAsClient);
+
+mmPeer.makeMultimediaPeer(peer, {
+  localStream: {
+    success: function(stream) {
+      document.querySelector('video.local').src = window.URL.createObjectURL(stream);
+    }
+  },
+}, actAsClient);
+
+//peer.createConnection(actAsClient);
 
 window.peer = peer;

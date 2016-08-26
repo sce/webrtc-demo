@@ -10,6 +10,11 @@ html(lang="en")
     // our code:
     script(src="/javascript/actAsClient.js")
 
+    style.
+      video {
+        max-width: 50%;
+      }
+
   body
     h1 WebRTC Client
 
@@ -18,6 +23,9 @@ html(lang="en")
     form
       input(type="text")
       input(type="submit")
+
+    video.local(autoplay)
+    video.remote(autoplay)
 
     script.
       function appendMsg(txt) {

@@ -10,9 +10,9 @@ function Peer(signalChannelReadUrl, signalChannelWriteUrl, receiveChannelCallbac
 };
 
 // This is the main entry point:
-Peer.prototype.createConnection = function(actAsClient) {
+Peer.prototype.createConnection = function(actAsClient, stream) {
   this.actAsClient = actAsClient;
-  this.createPeerConnection();
+  this.createPeerConnection(stream);
 
   // Setup data channel (that we can write to):
   var sendDataChannel = this.peerConnection.createDataChannel('sendDataChannel', null);
@@ -28,12 +28,19 @@ Peer.prototype.createConnection = function(actAsClient) {
   this.signalChannel.pollData(this.receiveSignalData.bind(this));
 };
 
-Peer.prototype.createPeerConnection = function() {
+Peer.prototype.createPeerConnection = function(stream) {
   this.peerConnection = RTCPeerConnection(null, null);
+
+  // adding the stream has to happen here: after creating the stream, before
+  // creating any offers:
+  if (stream) {
+    console.info("Setting stream on connection...");
+    this.peerConnection.addStream(stream);
+  }
 
   // ice candidate events are created for us by our host/environment (the web browser):
   var self = this;
-  this.peerConnection.onicecandidate = (event) => {
+  this.peerConnection.onicecandidate = function(event) {
     if (event.candidate) {
       console.log("Created ICE event:");
       console.log(event);
@@ -46,7 +53,7 @@ Peer.prototype.createPeerConnection = function() {
   };
 
   // This means the WebRTC channel is up and running (no more need for the signal server):
-  this.peerConnection.ondatachannel = (event) => {
+  this.peerConnection.ondatachannel = function(event) {
     console.log("Got data channel from other peer!");
     self.receiveChannelCallback(event.channel);
   };
@@ -61,7 +68,7 @@ Peer.prototype.createOffer = function() {
     self.peerConnection.setLocalDescription(desc);
 
     self.signalChannel.send(desc, function(status) {
-      console.log("Offer sent to signal server.");
+      console.info("Offer sent to signal server.");
     });
   });
 };
@@ -75,7 +82,7 @@ Peer.prototype.createAnswer = function() {
     self.peerConnection.setLocalDescription(desc);
 
     self.signalChannel.send(desc, function (status) {
-      console.log("Answer sent to signal server:", + status);
+      console.info("Answer sent to signal server:", + status);
     });
   });
 };
@@ -88,10 +95,15 @@ Peer.prototype.receiveSignalData = function(data) {
     console.log("Got ICE candidate via signal channel:");
     console.log(data.candidate);
 
-    this.peerConnection.addIceCandidate(data,
-      function() { console.log("Remote ICE candidate added.") },
-      function() { console.error("Remote ICE candidate: Failed to add!") }
-    );
+    if (this.gotRemoteDescription) {
+      this.peerConnection.addIceCandidate(data,
+        function() { console.warn("Remote ICE candidate added (direct)") },
+        function(err) { console.error("Remote ICE candidate: Failed to add!", err) }
+      );
+    } else {
+      this.iceCandidates = this.iceCandidates || [];
+      this.iceCandidates.push(data);
+    }
 
   } else {
     // If we've previously sent, then this was an answer. If we haven't sent,
@@ -105,6 +117,17 @@ Peer.prototype.receiveSignalData = function(data) {
       this.peerConnection.setRemoteDescription(data);
 
       this.createAnswer();
+    }
+    this.gotRemoteDescription = true;
+
+    if (this.iceCandidates) {
+      var self = this;
+      this.iceCandidates.forEach(function(candidate) {
+        self.peerConnection.addIceCandidate(candidate,
+          function() { console.warn("Remote ICE candidate added (buffered).") },
+          function(err) { console.error("Remote ICE candidate: Failed to add!", err) }
+        );
+      });
     }
   }
 };
