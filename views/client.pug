@@ -1,0 +1,47 @@
+doctype html
+html(lang="en")
+  head
+    title WebRTC Client
+
+    // webrtc shim:
+    script(src="/javascript/common.js")
+    script(src="/javascript/adapter.js")
+
+    // our code:
+    script(src="/javascript/actAsClient.js")
+
+  body
+    h1 WebRTC Client
+
+    #msgs
+
+    form
+      input(type="text")
+      input(type="submit")
+
+    script.
+      function appendMsg(txt) {
+        var div = document.createElement('div');
+        var textNode = document.createTextNode(txt);
+        div.appendChild(textNode);
+
+        var msgs = document.querySelector('#msgs');
+        msgs.appendChild(div);
+      };
+
+      document.querySelector('input[type="submit"]').addEventListener('click', function(event) {
+        //event.stopPropagation();
+        event.preventDefault();
+
+        var input = document.querySelector('input[type="text"]');
+
+        window.sendChannel.send(input.value);
+        appendMsg("you: " + input.value);
+
+        input.value = '';
+      });
+
+      window.peer.onreceivemessage = function(msg) {
+        console.log("received:", msg.data);
+        appendMsg("other: " + msg.data);
+      };
